@@ -73,7 +73,12 @@ static int msg_cnt = 0;
 void *ctx = NULL;
 char rcv_buff[1024];
 
-#define NBIOT_DEVICE2 1
+//device 1, get the device IMEI, and create device on cloud
+//#define NBIOT_DEVICE_IMEI "460042337505289"
+//device 2
+#define NBIOT_DEVICE_IMEI "869405035794842"
+
+char nbiot_msg[64];
 
 int para;
 sem_t task_sem;
@@ -123,13 +128,9 @@ int sal_task(int argc, char *argv[])
 				}
 			
 				//register on cloud
-				#if (NBIOT_DEVICE2 == 1)
-				char *msg = "ep=869405035794842&pw=123456"; //device 2
-				#else
-				char *msg = "ep=460042337505289&pw=123456"; //device 1
-				#endif
+				snprintf(nbiot_msg, 64, "ep=%s&pw=123456", NBIOT_DEVICE_IMEI);
 
-				if (atiny_net_sendto(ctx, msg, 28, "115.29.240.46", 6000) < 0) {
+				if (atiny_net_sendto(ctx, nbiot_msg, strlen(nbiot_msg), "115.29.240.46", 6000) < 0) {
 					printf("send regist msg failed.\n");
 					atiny_net_close(ctx);
 					return 0;
@@ -137,23 +138,18 @@ int sal_task(int argc, char *argv[])
 				printf("registered to cloud server.\n");
 				sleep(3);
 
-				#if (NBIOT_DEVICE2 == 1)
-				msg = "this is a message from tizenrt NBIOT_DEVICE2";
-				#else
-				msg = "this is a message from tizenrt";
-				#endif
-				if (atiny_net_sendto(ctx, msg, 30, "115.29.240.46", 6000) < 0) {
+				snprintf(nbiot_msg, 64, "this is a message from tizenrt %s", NBIOT_DEVICE_IMEI);
+				if (atiny_net_sendto(ctx, nbiot_msg, strlen(nbiot_msg), "115.29.240.46", 6000) < 0) {
 					printf("send regist msg failed.\n");
 					atiny_net_close(ctx);
 					return 0;
-				}
-			
+				}			
 			
 				while(msg_cnt < 3)
 				{
 					sleep(3);
 					char send_msg[64];
-					snprintf(send_msg, 64, "%s %d",msg, msg_cnt++);
+					snprintf(send_msg, 64, "%s %d",nbiot_msg, msg_cnt++);
 					if (atiny_net_sendto(ctx, send_msg, strlen(send_msg), "115.29.240.46", 6000) < 0) {
 						printf("send regist msg failed.\n");
 						return 0;
@@ -166,13 +162,9 @@ int sal_task(int argc, char *argv[])
 			break;
 			case 2:
 			{
-				#if (NBIOT_DEVICE2 == 1)
-				char *reg_msg = "ep=869405035794842&pw=123456"; //device 2
-				#else
-				char *reg_msg = "ep=460042337505289&pw=123456"; //device 1
-				#endif
+				snprintf(nbiot_msg, 64, "ep=%s&pw=123456", NBIOT_DEVICE_IMEI);
 
-				if (atiny_net_sendto(ctx, reg_msg, 28, "115.29.240.46", 6000) < 0) {
+				if (atiny_net_sendto(ctx, nbiot_msg, strlen(nbiot_msg), "115.29.240.46", 6000) < 0) {
 					printf("send regist msg failed.\n");
 					return 0;
 				}
@@ -181,13 +173,8 @@ int sal_task(int argc, char *argv[])
 			break;
 			case 3:
 			{
-				char send_msg[64];
-				#if (NBIOT_DEVICE2 == 1)
-				snprintf(send_msg, 64, "this is a new message from tizenrt NBIOT_DEVICE2 %d",msg_cnt++);
-				#else
-				snprintf(send_msg, 64, "this is a new message from tizenrt %d",msg_cnt++);
-				#endif
-				if (atiny_net_sendto(ctx, send_msg, strlen(send_msg), "115.29.240.46", 6000) < 0) {
+				snprintf(nbiot_msg, 64, "this is a message from tizenrt %s", NBIOT_DEVICE_IMEI);
+				if (atiny_net_sendto(ctx, nbiot_msg, strlen(nbiot_msg), "115.29.240.46", 6000) < 0) {
 					printf("send regist msg failed.\n");
 					return 0;
 				}
