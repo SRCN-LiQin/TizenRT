@@ -18,6 +18,13 @@ config NET
 	---help---
 		Enable or disable all system network features
 
+config SOCKET_ABSTRACT
+	bool "SAL/AT FW"
+	default n
+	---help---
+		Enable socket abstract layer with AT tunnel, 
+		to replace system network features
+
 if NET
 
 choice
@@ -131,7 +138,6 @@ source "$EXTERNALDIR/smtp/Kconfig.protocol"
 source "$EXTERNALDIR/grpc/Kconfig.protocol"
 
 source "../framework/src/network/mqtt/Kconfig.protocol"
-source "../framework/src/network/sal/Kconfig.protocol"
 
 config NET_SECURITY_TLS
 	bool "TLS Support"

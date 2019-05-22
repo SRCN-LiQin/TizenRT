@@ -208,7 +208,7 @@ int32_t at_usart_init(void)
 
 	ret = tcgetattr(fd, &tio);
 	if (ret) {
-		printf("get uart attr failed\n");
+		printf("get uart attr failed, ret %d\n", ret);
 		close(fd);
 		return AT_FAILED;
 	}

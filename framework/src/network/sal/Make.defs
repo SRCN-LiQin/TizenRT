@@ -16,7 +16,7 @@
 #
 ###########################################################################
 
-ifeq ($(CONFIG_SUPPORT_SOCKET_ABSTRACT),y)
+ifeq ($(CONFIG_SOCKET_ABSTRACT),y)
 
 CSRCS += sal_at_api.c sal_at_hal.c sal_at_main.c sal_bc95.c sal_nb_api.c sal_osdep.c sal_socket.c
 
