@@ -75,6 +75,18 @@ char rcv_buff[1024];
 
 int para;
 sem_t task_sem;
+int sal_app_rcv(int argc, char *argv[])
+{
+	/* try to rcv msg*/
+	while(1) {
+		if (atiny_net_recv(ctx,rcv_buff,1024) > 0) {
+			printf("socket receive data from cloud [%s]\n", rcv_buff);
+		}
+	}
+
+	return 0;
+}
+
 int sal_task(int argc, char *argv[])
 {
 	sem_init(&task_sem, 1, 0);
@@ -137,15 +149,8 @@ int sal_task(int argc, char *argv[])
 					}
 				}
 
-				/* try to rcv msg
-				while(1) {
-					if (atiny_net_recv(ctx,rcv_buff,1024) > 0) {
-						printf("socket receive data from cloud %s\n", rcv_buff);
-					}
-				}*/
-			
+				task_create("sal_app_rcv", SAL_RCV_TASK_PRIORITY, 0x1000, sal_app_rcv, NULL);
 				//atiny_net_close(ctx);
-
 			}
 			break;
 			case 2:
