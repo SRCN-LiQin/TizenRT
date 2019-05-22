@@ -73,6 +73,8 @@ static int msg_cnt = 0;
 void *ctx = NULL;
 char rcv_buff[1024];
 
+#define NBIOT_DEVICE2 1
+
 int para;
 sem_t task_sem;
 int sal_app_rcv(int argc, char *argv[])
@@ -112,7 +114,7 @@ int sal_task(int argc, char *argv[])
 					printf("nb_check_cloud_access failed!\n");
 					return 0;
 				}
-			
+				
 				//create udp socket with cloud
 				ctx = atiny_net_bind("115.29.240.46", "4588", 17); //actually only port is used, host is fixed for nbiot(cloud server), and proto could only be UDP
 				if (!ctx) {
@@ -121,7 +123,12 @@ int sal_task(int argc, char *argv[])
 				}
 			
 				//register on cloud
-				char *msg = "ep=460042337505289&pw=123456";
+				#if (NBIOT_DEVICE2 == 1)
+				char *msg = "ep=869405035794842&pw=123456"; //device 2
+				#else
+				char *msg = "ep=460042337505289&pw=123456"; //device 1
+				#endif
+
 				if (atiny_net_sendto(ctx, msg, 28, "115.29.240.46", 6000) < 0) {
 					printf("send regist msg failed.\n");
 					atiny_net_close(ctx);
@@ -129,8 +136,12 @@ int sal_task(int argc, char *argv[])
 				}
 				printf("registered to cloud server.\n");
 				sleep(3);
-			
+
+				#if (NBIOT_DEVICE2 == 1)
+				msg = "this is a message from tizenrt NBIOT_DEVICE2";
+				#else
 				msg = "this is a message from tizenrt";
+				#endif
 				if (atiny_net_sendto(ctx, msg, 30, "115.29.240.46", 6000) < 0) {
 					printf("send regist msg failed.\n");
 					atiny_net_close(ctx);
@@ -142,7 +153,7 @@ int sal_task(int argc, char *argv[])
 				{
 					sleep(3);
 					char send_msg[64];
-					snprintf(send_msg, 64, "this is a message from tizenrt %d",msg_cnt++);
+					snprintf(send_msg, 64, "%s %d",msg, msg_cnt++);
 					if (atiny_net_sendto(ctx, send_msg, strlen(send_msg), "115.29.240.46", 6000) < 0) {
 						printf("send regist msg failed.\n");
 						return 0;
@@ -155,7 +166,12 @@ int sal_task(int argc, char *argv[])
 			break;
 			case 2:
 			{
-				char *reg_msg = "ep=460042337505289&pw=123456";
+				#if (NBIOT_DEVICE2 == 1)
+				char *reg_msg = "ep=869405035794842&pw=123456"; //device 2
+				#else
+				char *reg_msg = "ep=460042337505289&pw=123456"; //device 1
+				#endif
+
 				if (atiny_net_sendto(ctx, reg_msg, 28, "115.29.240.46", 6000) < 0) {
 					printf("send regist msg failed.\n");
 					return 0;
@@ -166,7 +182,11 @@ int sal_task(int argc, char *argv[])
 			case 3:
 			{
 				char send_msg[64];
+				#if (NBIOT_DEVICE2 == 1)
+				snprintf(send_msg, 64, "this is a new message from tizenrt NBIOT_DEVICE2 %d",msg_cnt++);
+				#else
 				snprintf(send_msg, 64, "this is a new message from tizenrt %d",msg_cnt++);
+				#endif
 				if (atiny_net_sendto(ctx, send_msg, strlen(send_msg), "115.29.240.46", 6000) < 0) {
 					printf("send regist msg failed.\n");
 					return 0;

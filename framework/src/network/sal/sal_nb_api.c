@@ -51,6 +51,8 @@ int los_nb_init(const int8_t* host, const int8_t* port, sec_param_s* psk)
 
     sleep(3);
 
+	nb_query_IMEI();
+	sleep(1);
     //nb_get_auto_connect();
     //nb_connect(NULL, NULL, NULL);
 

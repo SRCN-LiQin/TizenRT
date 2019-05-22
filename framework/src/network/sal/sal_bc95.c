@@ -180,6 +180,12 @@ int32_t nb_check_csq(void)
     return at.cmd((int8_t*)cmd, strlen(cmd), "+CSQ:", NULL,NULL);
 }
 
+int32_t nb_query_IMEI(void)
+{
+    char *cmd = "AT+CGSN=1\r";
+    return at.cmd((int8_t*)cmd, strlen(cmd), "+CGSN:", NULL,NULL);
+}
+
 int32_t nb_set_cdpserver(char* host, char* port)
 {
     char *cmd = "AT+NCDP=";
@@ -659,6 +665,7 @@ int32_t nb_recv_timeout(int32_t id , uint8_t  *buf, uint32_t len,char* ipaddr,in
 
     if (rlen){
         memcpy(buf, qbuf.addr, rlen);
+        buf[rlen] = 0;
         at_free(qbuf.addr);
     }
     return rlen;
