@@ -1,0 +1,10 @@
+#
+# For a description of the syntax of this configuration file,
+# see kconfig-language at https://www.kernel.org/doc/Documentation/kbuild/kconfig-language.txt
+#
+
+config SUPPORT_SOCKET_ABSTRACT
+	bool "SAL/AT FW"
+	default n
+	---help---
+		Enable socket abstract layer with AT tunnel

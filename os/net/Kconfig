@@ -131,6 +131,7 @@ source "$EXTERNALDIR/smtp/Kconfig.protocol"
 source "$EXTERNALDIR/grpc/Kconfig.protocol"
 
 source "../framework/src/network/mqtt/Kconfig.protocol"
+source "../framework/src/network/sal/Kconfig.protocol"
 
 config NET_SECURITY_TLS
 	bool "TLS Support"
