@@ -18,7 +18,7 @@
 
 ifeq ($(CONFIG_SOCKET_ABSTRACT),y)
 
-CSRCS += sal_at_api.c sal_at_hal.c sal_at_main.c sal_bc95.c sal_nb_api.c sal_osdep.c sal_socket.c
+CSRCS += sal_at_api.c sal_at_hal.c sal_at_main.c sal_bc95.c sal_nb_api.c sal_osdep.c sal_socket.c sal_esp8266.c
 
 DEPPATH += --dep-path src/network/sal
 VPATH += :src/network/sal
