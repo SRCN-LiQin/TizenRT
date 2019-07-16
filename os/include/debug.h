@@ -882,6 +882,30 @@
 #define ullvdbg(...)
 #endif
 
+#ifdef CONFIG_DEBUG_LCD_ERROR
+#define lcddbg(format, ...)    dbg(format, ##__VA_ARGS__)
+#define lcdlldbg(format, ...)  lldbg(format, ##__VA_ARGS__)
+#else
+#define lcddbg(...)
+#define lcdlldbg(...)
+#endif
+
+#ifdef CONFIG_DEBUG_LCD_WARN
+#define lcdwdbg(format, ...)    wdbg(format, ##__VA_ARGS__)
+#define lcdllwdbg(format, ...)  llwdbg(format, ##__VA_ARGS__)
+#else
+#define lcdwdbg(...)
+#define lcdllwdbg(...)
+#endif
+
+#ifdef CONFIG_DEBUG_LCD_INFO
+#define lcdvdbg(format, ...)   vdbg(format, ##__VA_ARGS__)
+#define lcdllvdbg(format, ...) llvdbg(format, ##__VA_ARGS__)
+#else
+#define lcdvdbg(...)
+#define lcdllvdbg(...)
+#endif
+
 #ifdef CONFIG_DEBUG_IOTBUS
 #define ibdbg(format, ...)	dbg(format, ##__VA_ARGS__)
 #define ibvdbg(format, ...)	vdbg(format, ##__VA_ARGS__)
@@ -1193,6 +1217,29 @@
 #define tmllvdbg    (void)
 #endif
 
+#ifdef CONFIG_DEBUG_LCD_ERROR
+#define lcddbg      dbg
+#define lcdlldbg    lldbg
+#else
+#define lcddbg      (void)
+#define lcdlldbg    (void)
+#endif
+
+#ifdef CONFIG_DEBUG_LCD_WARN
+#define lcdwdbg     wdbg
+#define lcdllwdbg   llwdbg
+#else
+#define lcdwdbg     (void)
+#define lcdllwdbg   (void)
+#endif
+
+#ifdef CONFIG_DEBUG_LCD_INFO
+#define lcdvdbg     vdbg
+#define lcdllvdbg   llvdbg
+#else
+#define lcdvdbg     (void)
+#define lcdllvdbg   (void)
+#endif
 
 /******************************************/
 /*        OS Function specific debug      */

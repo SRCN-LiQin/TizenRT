@@ -68,6 +68,7 @@
 #include "esp32_gpio.h"
 #include "esp32_core.h"
 #include "esp32_i2c.h"
+#include "esp32_lcd.h"
 #include "common.h"
 #include <tinyara/gpio.h>
 #include <../xtensa/xtensa.h>
@@ -232,6 +233,8 @@ static void board_adc_initialize(void)
 #ifdef CONFIG_BOARD_INITIALIZE
 void board_initialize(void)
 {
+	int ret;
+
 	/* Perform board-specific initialization */
 	(void)esp32_bringup();
 	configure_partitions();
@@ -239,6 +242,14 @@ void board_initialize(void)
 	board_gpio_initialize();
 	board_i2c_initialize();
 	board_ledc_setup();
+
+#ifdef CONFIG_VIDEO_FB
+	/* Initialize and register the framebuffer driver */
+	ret = fb_register(0, 0);
+	if (ret < 0) {
+		syslog(LOG_ERR, "ERROR: fb_register() failed: %d\n", ret);
+	}
+#endif
 
 #if defined(CONFIG_ADC)
 	board_adc_initialize();

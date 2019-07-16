@@ -3,6 +3,8 @@
 # see kconfig-language at https://www.kernel.org/doc/Documentation/kbuild/kconfig-language.txt
 #
 
+source drivers/lcd/Kconfig
+
 config DISABLE_POLL
 	bool "Disable driver poll interfaces" if NFILE_DESCRIPTORS != 0
 	default n if NFILE_DESCRIPTORS != 0
@@ -245,6 +247,16 @@ menuconfig AUDIO_DEVICES
 if AUDIO_DEVICES
 source drivers/audio/Kconfig
 endif # AUDIO_DEVICES
+
+menuconfig DRIVERS_VIDEO
+	bool "Video Device Support"
+	default n
+	---help---
+		Enable support for video device drivers.
+
+if DRIVERS_VIDEO
+source drivers/video/Kconfig
+endif # DRIVERS_VIDEO
 
 menuconfig BCH
 	bool "Block-to-Character (BCH) Support"

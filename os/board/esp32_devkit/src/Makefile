@@ -55,7 +55,7 @@ SCRIPTDIR = $(TOPDIR)$(DELIM)..$(DELIM)build$(DELIM)configs$(DELIM)$(CONFIG_ESP3
 CONFIGFILE = $(TOPDIR)$(DELIM)include$(DELIM)tinyara$(DELIM)config.h
 
 ASRCS =
-CSRCS = esp32_boot.c esp32_bringup.c esp32_led.c
+CSRCS = esp32_boot.c esp32_bringup.c esp32_led.c esp32_lcd.c
 CSRCS += partitions.c
 
 ifeq ($(CONFIG_LIB_BOARDCTL),y)
