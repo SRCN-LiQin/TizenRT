@@ -29,10 +29,19 @@
 #include <errno.h>
 #include <debug.h>
 #include <assert.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <stdio.h>
 
 #include <tinyara/board.h>
 #include <tinyara/lcd/lcd.h>
 #include <tinyara/lcd/ili9341.h>
+
+#include <tinyara/gpio.h>
+#include <tinyara/spi/spi.h>
+#include <fcntl.h>
+#include <sys/ioctl.h>
+#include "esp32_lcd.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -84,6 +93,29 @@
 #  error "Unsupported BPP"
 #endif
 
+#define ESP_LCD_DC_GPIO 21
+#define ESP_LCD_RESET_GPIO 18
+#define ESP_LCD_BL_GPIO 5
+#define ESP_LCD_SPI_CLOCK 40000000
+#ifdef CONFIG_ESP_LCD_SPI_PORTNUM
+#define ESP_LCD_SPI_NUM CONFIG_ESP_LCD_SPI_PORTNUM
+#else
+#define ESP_LCD_SPI_NUM 2
+#endif
+
+#define LCD_CMD_LEV   (0)
+#define LCD_DATA_LEV  (1)
+#define GPIO_NUM_MAX  (40)
+#define MSLEEP(t) usleep((t) * 1000)
+#define MIN(a,b) ((a)<(b) ? (a):(b))
+#define SWAPBYTES(i) ((i >> 8) | (i << 8))
+//when enabling spiram and use 80M VSPI, it's conflict to use spiram for LCD transmit buffer
+#if CONFIG_MM_NHEAPS > 1
+#define LCD_MALLOC(size) malloc_at(0, (size))
+#else
+#define LCD_MALLOC(size) malloc(size)
+#endif
+
 /****************************************************************************
  * Private Type Definition
  ****************************************************************************/
@@ -97,43 +129,124 @@ static int esp32_ili9341_recvgram(FAR struct ili9341_lcd_s *lcd, uint16_t *wd, u
 static int esp32_ili9341_sendgram(FAR struct ili9341_lcd_s *lcd, const uint16_t *wd, uint32_t nwords);
 static int esp32_ili9341_backlight(FAR struct ili9341_lcd_s *lcd, int level);
 
-FAR struct ili9341_lcd_s g_lcd = {
-	.select = esp32_ili9341_select,
-	.deselect = esp32_ili9341_deselect,
-	.sendcmd = esp32_ili9341_sendcmd,
-	.sendparam = esp32_ili9341_sendparam,
-	.recvparam = esp32_ili9341_recvparam,
-	.recvgram = esp32_ili9341_recvgram,
-	.sendgram = esp32_ili9341_sendgram,
-	.backlight = esp32_ili9341_backlight
+struct esp32_lcd_s {
+	/* Publically visible device structure */
+	struct ili9341_lcd_s lcd;
+
+	/* Private driver-specific information follows */
+	struct spi_dev_s* spidev;
+};
+
+FAR struct esp32_lcd_s g_lcd = {
+	.lcd.select = esp32_ili9341_select,
+	.lcd.deselect = esp32_ili9341_deselect,
+	.lcd.sendcmd = esp32_ili9341_sendcmd,
+	.lcd.sendparam = esp32_ili9341_sendparam,
+	.lcd.recvparam = esp32_ili9341_recvparam,
+	.lcd.recvgram = esp32_ili9341_recvgram,
+	.lcd.sendgram = esp32_ili9341_sendgram,
+	.lcd.backlight = esp32_ili9341_backlight
 };
 
 FAR struct lcd_dev_s *g_lcddev = NULL;
+
+lcd_conf_t g_devconf = {
+	.pin_num_dc = ESP_LCD_DC_GPIO,
+	.pin_num_rst = ESP_LCD_RESET_GPIO,
+	.pin_num_bckl = ESP_LCD_BL_GPIO,
+	.clk_freq = ESP_LCD_SPI_CLOCK,
+	.rst_active_level = 0,
+	.bckl_active_level = 0,//ESP_BCKL_ACTIVE_LEVEL, seems 0 or 1
+	.spi_host = ESP_LCD_SPI_NUM, //(spi_host_device_t)ESP_LCD_SPI_NUM, means HSPI, replaced by spi port para ->ESP32  HSPI_PORT
+};
+
 
 /****************************************************************************
  * Private Function Prototypes
  ****************************************************************************/
 
+static int gpio_set_direction(int port, gpio_direciton_t dir)
+{
+	char devpath[16];
+	snprintf(devpath, 16, "/dev/gpio%d", port);
+	int fd = open(devpath, O_RDWR);
+	if (fd < 0) {
+		lldbg("fd open %s fail\n",devpath);
+		return -1;
+	}
+
+	ioctl(fd, GPIOIOC_SET_DIRECTION, dir);
+
+	close(fd);
+	return 0;
+}
+
+static int gpio_set_level(int port, int value)
+{
+	char buf[4];
+	char devpath[16];
+	int fd;
+
+	snprintf(devpath, 16, "/dev/gpio%d", port);
+	fd = open(devpath, O_RDWR);
+	if (fd < 0) {
+		lldbg("fd open fail\n");
+		return -1;
+	}
+
+	ioctl(fd, GPIOIOC_SET_DIRECTION, GPIO_DIRECTION_OUT);
+	if (write(fd, buf, snprintf(buf, sizeof(buf), "%d", !!value)) < 0) {
+		lldbg("write error\n");
+	}
+
+	close(fd);
+	return 0;
+}
+
 static void esp32_ili9341_select(FAR struct ili9341_lcd_s *lcd)
 {
+	FAR struct esp32_lcd_s *priv = (FAR struct esp32_lcd_s *)lcd;
+	SPI_LOCK(priv->spidev, true);
+	SPI_SELECT(priv->spidev, CONFIG_ESP32_SPI_CS, true);
 }
 
 static void esp32_ili9341_deselect(FAR struct ili9341_lcd_s *lcd)
 {
+	FAR struct esp32_lcd_s *priv = (FAR struct esp32_lcd_s *)lcd;
+	SPI_LOCK(priv->spidev, false);
 }
 
 static int esp32_ili9341_sendcmd(FAR struct ili9341_lcd_s *lcd, const uint8_t cmd)
 {
+	FAR struct esp32_lcd_s *priv = (FAR struct esp32_lcd_s *)lcd;
+	gpio_set_level((int)g_devconf.pin_num_dc, LCD_CMD_LEV);
+	SPI_SNDBLOCK(priv->spidev, &cmd, 1);
+
 	return 0;
+}
+
+static void esp32_lcd_data(struct spi_dev_s* spi, const uint8_t *data, int len)
+{
+	gpio_set_level((int)g_devconf.pin_num_dc, LCD_DATA_LEV);
+	SPI_SNDBLOCK(spi, data, len);
 }
 
 static int esp32_ili9341_sendparam(FAR struct ili9341_lcd_s *lcd, const uint8_t param)
 {
+	FAR struct esp32_lcd_s *priv = (FAR struct esp32_lcd_s *)lcd;
+
+	esp32_lcd_data(priv->spidev, &param, 1);
+
 	return 0;
 }
 
 static int esp32_ili9341_recvparam(FAR struct ili9341_lcd_s *lcd, uint8_t *param)
 {
+	FAR struct esp32_lcd_s *priv = (FAR struct esp32_lcd_s *)lcd;
+
+	gpio_set_level((int)g_devconf.pin_num_dc, LCD_DATA_LEV);
+	SPI_RECVBLOCK(priv->spidev, param, 1);
+
 	return 0;
 }
 
@@ -144,11 +257,46 @@ static int esp32_ili9341_recvgram(FAR struct ili9341_lcd_s *lcd, uint16_t *wd, u
 
 static int esp32_ili9341_sendgram(FAR struct ili9341_lcd_s *lcd, const uint16_t *wd, uint32_t nwords)
 {
+	int i;
+	uint16_t data;
+	FAR struct esp32_lcd_s *priv = (FAR struct esp32_lcd_s *)lcd;
+	uint16_t *data_buf;
+	int dma = 0;
+#if (defined(CONFIG_SPI2_DMA_CHANNEL) && CONFIG_SPI2_DMA_CHANNEL > 0)
+	dma = 1;
+#endif
+
+	if (dma) {
+		//lcd.h putrun set data row by row, so it's no more than 320 pixels, 
+		data_buf = (uint16_t*) LCD_MALLOC(nwords * sizeof(uint16_t));
+		if (data_buf == NULL) {
+			lldbg("[sendgram]MALLOC FAILED!\n");
+			return 0;
+		}
+		for (i = 0; i < nwords; i++) {
+			data_buf[i] = SWAPBYTES(wd[i]);
+		}
+		esp32_lcd_data(priv->spidev, (uint8_t*)(data_buf), nwords * sizeof(uint16_t));
+		free(data_buf);
+		data_buf = NULL;
+	} else {
+		for (i = 0; i < nwords; i++) {
+			data = SWAPBYTES(wd[i]);
+			esp32_lcd_data(priv->spidev, (uint8_t*)&data, 2);
+		}
+	}
+
 	return nwords;
 }
 
 static int esp32_ili9341_backlight(FAR struct ili9341_lcd_s *lcd, int level)
 {
+	int bckl_active_level  = level? 0 : 1;
+
+	gpio_pad_select_gpio(g_devconf.pin_num_bckl);
+	gpio_set_direction(g_devconf.pin_num_bckl, GPIO_DIRECTION_OUT);
+	gpio_set_level(g_devconf.pin_num_bckl, bckl_active_level & 0x1);
+
 	return 0;
 }
 
@@ -159,7 +307,35 @@ static int esp32_ili9341_backlight(FAR struct ili9341_lcd_s *lcd, int level)
 
 FAR struct ili9341_lcd_s *esp32_ili9341_initialize(void)
 {
-	return &g_lcd;
+	struct spi_dev_s* lcd_handle;
+	//Initialize non-SPI GPIOs
+	gpio_pad_select_gpio(g_devconf.pin_num_dc);
+	gpio_set_direction(g_devconf.pin_num_dc, GPIO_DIRECTION_OUT);
+
+	//Reset the display
+	if (g_devconf.pin_num_rst < GPIO_NUM_MAX) {
+		gpio_pad_select_gpio(g_devconf.pin_num_rst);
+		gpio_set_direction(g_devconf.pin_num_rst, GPIO_DIRECTION_OUT);
+		gpio_set_level(g_devconf.pin_num_rst, (g_devconf.rst_active_level) & 0x1);
+		MSLEEP(100);
+		gpio_set_level(g_devconf.pin_num_rst, (~(g_devconf.rst_active_level)) & 0x1);
+		MSLEEP(100);
+	}
+
+	g_lcd.spidev = lcd_handle = up_spiinitialize(g_devconf.spi_host); //HSPI_PORT
+	SPI_SELECT(lcd_handle, CONFIG_ESP32_SPI_CS, true);
+	SPI_SETBITS(lcd_handle, 8);
+	SPI_SETMODE(lcd_handle, SPIDEV_MODE0);
+	SPI_SETFREQUENCY(lcd_handle, g_devconf.clk_freq);
+
+	//Enable backlight
+	if (g_devconf.pin_num_bckl < GPIO_NUM_MAX) {
+		gpio_pad_select_gpio(g_devconf.pin_num_bckl);
+		gpio_set_direction(g_devconf.pin_num_bckl, GPIO_DIRECTION_OUT);
+		gpio_set_level(g_devconf.pin_num_bckl, (g_devconf.bckl_active_level) & 0x1);
+	}
+
+	return &g_lcd.lcd;
 }
 
 /****************************************************************************
