@@ -104,10 +104,10 @@ static void wm_scan_done(wifi_manager_scan_info_s **scan_result, wifi_manager_sc
  */
 static void wm_auto_test(void *arg); // it tests softap mode and stations mode repeatedly
 static void wm_coverage(void *arg); 
-static void wm_start(void *arg);
+void wm_start(void *arg);
 static void wm_stop(void *arg);
 static void wm_softap_start(void *arg);
-static void wm_connect(void *arg);
+void wm_connect(void *arg);
 static void wm_disconnect(void *arg);
 static void wm_cancel(void *arg); // stop reconnecting to wifi AP. it doesn't expect to receive a signal because AP is already disconnected
 static void wm_scan(void *arg);
@@ -1436,7 +1436,6 @@ int main(int argc, FAR char *argv[])
 int wm_test_main(int argc, char *argv[])
 #endif
 {
-	printf("wifi manager test!!\n");
 	int res = wm_signal_init();
 	if (res < 0) {
 		return -1;

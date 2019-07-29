@@ -604,7 +604,7 @@ POOL_CHECK:
 		return DHCPS_STATE_NAK;
 	}
 
-	LWIP_DEBUGF(DHCP_DEBUG, ("Assigned client IP address %u.%u.%u.%u\n", (unsigned char)((htonl(client_address.addr) >> 24) & 0xff), (unsigned char)((htonl(client_address.addr) >> 16) & 0xff), (unsigned char)((htonl(client_address.addr) >> 8) & 0xff), (unsigned char)((htonl(client_address.addr) >> 0) & 0xff)));
+	//LWIP_DEBUGF(DHCP_DEBUG, ("Assigned client IP address %u.%u.%u.%u\n", (unsigned char)((htonl(client_address.addr) >> 24) & 0xff), (unsigned char)((htonl(client_address.addr) >> 16) & 0xff), (unsigned char)((htonl(client_address.addr) >> 8) & 0xff), (unsigned char)((htonl(client_address.addr) >> 0) & 0xff)));
 
 	ret = dhcps_parse_options(&m->options[4], len);
 
@@ -648,7 +648,7 @@ static void dhcps_recv(void *arg, struct udp_pcb *pcb, struct pbuf *p, const ip_
 	//struct netif *netif = (struct netif *)arg;
 	struct dhcps_msg *pmsg_dhcps = NULL;
 
-	LWIP_DEBUGF(DHCP_DEBUG, ("handle_dhcp(pbuf = %p) from DHCP client %" U16_F ".%" U16_F ".%" U16_F ".%" U16_F " port %" U16_F "\n", (void *)p, ip4_addr1_16(addr), ip4_addr2_16(addr), ip4_addr3_16(addr), ip4_addr4_16(addr), port));
+	//LWIP_DEBUGF(DHCP_DEBUG, ("handle_dhcp(pbuf = %p) from DHCP client %" U16_F ".%" U16_F ".%" U16_F ".%" U16_F " port %" U16_F "\n", (void *)p, ip4_addr1_16(addr), ip4_addr2_16(addr), ip4_addr3_16(addr), ip4_addr4_16(addr), port));
 	LWIP_DEBUGF(DHCP_DEBUG, ("pbuf->len = %" U16_F "\n", p->len));
 	LWIP_DEBUGF(DHCP_DEBUG, ("pbuf->tot_len = %" U16_F "\n", p->tot_len));
 
