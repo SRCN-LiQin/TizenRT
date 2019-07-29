@@ -63,7 +63,7 @@ THREADEXEC = TASH_EXECMD_ASYNC
 # Hello, World! Example
 
 ASRCS =
-CSRCS =
+CSRCS = sensor_mqtt_api.c
 MAINSRC = hello_main.c
 
 AOBJS = $(ASRCS:.S=$(OBJEXT))

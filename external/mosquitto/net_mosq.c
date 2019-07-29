@@ -201,8 +201,9 @@ int _mosquitto_packet_queue(struct mosquitto *mosq, struct _mosquitto_packet *pa
 	 * of select() if in threaded mode. */
 	if (mosq->sockpairW != INVALID_SOCKET) {
 #ifndef WIN32
-		if (write(mosq->sockpairW, &sockpair_data, 1)) {
-		}
+		//if (write(mosq->sockpairW, &sockpair_data, 1)) {
+		//}
+		send(mosq->sockpairW, &sockpair_data, 1, 0);
 #else
 #if defined(__TINYARA__)
 		if (send(mosq->sockpairW, &sockpair_data, 1, 0) == -1) {
@@ -271,6 +272,15 @@ int _mosquitto_socket_close(struct mosquitto *mosq)
 		mosq->listener = NULL;
 	}
 #endif
+
+	if( mosq->sockpairW > 0) {
+		COMPAT_CLOSE(mosq->sockpairW);
+		mosq->sockpairW = INVALID_SOCKET;
+	}
+	if( mosq->sockpairR > 0) {
+		COMPAT_CLOSE(mosq->sockpairR);
+		mosq->sockpairR = INVALID_SOCKET;
+	}
 
 	return rc;
 }
@@ -393,7 +403,6 @@ int _mosquitto_try_connect(struct mosquitto *mosq, const char *host, uint16_t po
 			if (rc < 0 && (errno == EINPROGRESS || errno == COMPAT_EWOULDBLOCK)) {
 				rc = MOSQ_ERR_CONN_PENDING;
 			}
-
 			if (blocking) {
 				/* Set non-blocking */
 				if (_mosquitto_socket_nonblock(*sock)) {
@@ -848,7 +857,8 @@ ssize_t _mosquitto_net_read(struct mosquitto *mosq, void *buf, size_t count)
 #endif
 
 #ifndef WIN32
-			return read(mosq->sock, buf, count);
+			//return read(mosq->sock, buf, count);
+			return recv(mosq->sock, buf, count, 0);
 #else
 			return recv(mosq->sock, buf, count, 0);
 #endif
@@ -911,7 +921,9 @@ ssize_t _mosquitto_net_write(struct mosquitto *mosq, void *buf, size_t count)
 #endif
 
 #ifndef WIN32
-			return write(mosq->sock, buf, count);
+			return send(mosq->sock, buf, count, 0);
+
+			//return write(mosq->sock, buf, count);
 #else
 			return send(mosq->sock, buf, count, 0);
 #endif
@@ -1024,7 +1036,6 @@ int _mosquitto_packet_write(struct mosquitto *mosq)
 			mosq->next_msg_out = mosquitto_time() + mosq->keepalive;
 			pthread_mutex_unlock(&mosq->msgtime_mutex);
 			/* End of duplicate, possibly unnecessary code */
-
 			pthread_mutex_lock(&mosq->callback_mutex);
 			if (mosq->on_disconnect) {
 				mosq->in_callback = true;
@@ -1032,6 +1043,7 @@ int _mosquitto_packet_write(struct mosquitto *mosq)
 				mosq->in_callback = false;
 			}
 			pthread_mutex_unlock(&mosq->callback_mutex);
+
 			pthread_mutex_unlock(&mosq->current_out_packet_mutex);
 			return MOSQ_ERR_SUCCESS;
 		}
@@ -1242,6 +1254,7 @@ int _mosquitto_packet_read(struct mosquitto *mosq)
 
 int _mosquitto_socket_nonblock(mosq_sock_t sock)
 {
+return 0;
 #ifndef WIN32
 	int opt;
 

@@ -64,6 +64,26 @@
 #ifdef CONFIG_NET_LWIP_NETDB
 int getaddrinfo(FAR const char *hostname, FAR const char *servname, FAR const struct addrinfo *hint, FAR struct addrinfo **res)
 {
+printf("getaddrinfo -> \n");
+	struct addrinfo *ai = (struct addrinfo *)zalloc(sizeof(struct addrinfo) + sizeof(struct sockaddr));
+	struct sockaddr *sa = (struct sockaddr *)(void *)((uint8_t *)ai + sizeof(struct addrinfo));
+
+	ai->ai_socktype = hint->ai_socktype;
+	ai->ai_protocol = hint->ai_protocol;
+	ai->ai_family = PF_INET;
+	ai->ai_addrlen = 4;
+	ai->ai_next = NULL;
+
+	sa->sa_data[2] = 109;
+	sa->sa_data[3] = 123;
+	sa->sa_data[4] = 100;
+	sa->sa_data[5] = 115;
+	
+	ai->ai_addr = sa;
+
+	*res = ai;
+	return 0;
+#if 0
 	int ret = -1;
 	struct req_lwip_data req;
 
@@ -91,5 +111,6 @@ int getaddrinfo(FAR const char *hostname, FAR const char *servname, FAR const st
 	*res = (struct addrinfo *)req.ai_res;
 	close(sockfd);
 	return ret;
+#endif
 }
 #endif

@@ -256,7 +256,12 @@ void at_usart_deinit(void)
 
 void at_transmit(uint8_t *cmd, int32_t len, int flag)
 {
-	AT_LOG("cmd %s\n",cmd);
+	if (flag) {
+		AT_LOG("cmd %s\n",cmd);
+	} else {
+		AT_LOG("data len %d\n", len);
+	}
+
     at_config *at_user_conf = at_get_config();
     
     char *line_end = at_user_conf->line_end;

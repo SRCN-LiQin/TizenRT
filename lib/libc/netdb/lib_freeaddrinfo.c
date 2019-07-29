@@ -52,6 +52,10 @@
 #ifdef CONFIG_NET_LWIP_NETDB
 void freeaddrinfo(FAR struct addrinfo *ai)
 {
+//hijack for SAL
+	free(ai);
+	return;
+
 	DEBUGASSERT(ai != NULL);
 
 	int ret = -1;

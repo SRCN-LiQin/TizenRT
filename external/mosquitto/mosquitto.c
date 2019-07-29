@@ -1165,6 +1165,7 @@ int mosquitto_loop(struct mosquitto *mosq, int timeout, int max_packets)
 	if (mosq->sock != INVALID_SOCKET) {
 		maxfd = mosq->sock;
 		FD_SET(mosq->sock, &readfds);
+
 		pthread_mutex_lock(&mosq->current_out_packet_mutex);
 		pthread_mutex_lock(&mosq->out_packet_mutex);
 		if (mosq->out_packet || mosq->current_out_packet) {
@@ -1221,6 +1222,7 @@ int mosquitto_loop(struct mosquitto *mosq, int timeout, int max_packets)
 		/* sockpairR is used to break out of select() before the timeout, on a
 		 * call to publish() etc. */
 		FD_SET(mosq->sockpairR, &readfds);
+
 		if (mosq->sockpairR > maxfd) {
 			maxfd = mosq->sockpairR;
 		}
@@ -1296,11 +1298,12 @@ int mosquitto_loop(struct mosquitto *mosq, int timeout, int max_packets)
 			if (mosq->sockpairR != INVALID_SOCKET && FD_ISSET(mosq->sockpairR, &readfds)) {
 #ifndef WIN32
 #if defined(__TINYARA__)
-				if (read(mosq->sockpairR, &pairbuf, 1) == 1) {
+				recv(mosq->sockpairR, &pairbuf, 1, 0);
+				/*if (read(mosq->sockpairR, &pairbuf, 1) == 1) {
 					if (pairbuf == 0xff) {
 						return MOSQ_ERR_FORCE_EXIT;
 					}
-				}
+				}*/
 #else
 				if (read(mosq->sockpairR, &pairbuf, 1) == 0) {
 				}

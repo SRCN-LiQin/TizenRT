@@ -4,8 +4,10 @@
 
 #include "sal_at_main.h"
 
-#define WIFI_SSID      		"GalaxyC7Pro"
-#define WIFI_PASSWD    		"19850928"
+//#define WIFI_SSID      		"Galaxy-C7.Pro"
+//#define WIFI_PASSWD    		"19850928"
+#define WIFI_SSID      		"SRCN-2.4G"
+#define WIFI_PASSWD    		"wc6rn9v3"
 
 #define AT_MODU_NAME    	"ESP8266"
 #define AT_USART_PORT   	3

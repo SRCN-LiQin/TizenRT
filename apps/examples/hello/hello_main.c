@@ -60,6 +60,7 @@
 /****************************************************************************
  * hello_main
  ****************************************************************************/
+
 #include <network/sal/sal_nb_api.h>
 #include <network/sal/sal_bc95.h>
 #include <network/sal/sal_at_api.h>
@@ -72,10 +73,16 @@
 #include <sys/ioctl.h>
 #include <fcntl.h>
 
-extern at_adaptor_api bc95_interface;
-extern at_adaptor_api esp8266_interface;
+#define SAL_NBIOT 0
+#define SAL_WIFI  1
 
-int first_in = 1;
+int para;
+sem_t task_sem;
+
+#if SAL_NBIOT
+extern at_adaptor_api bc95_interface;
+
+
 static int msg_cnt = 0;
 void *ctx = NULL;
 char rcv_buff[1024];
@@ -96,8 +103,6 @@ static iotbus_gpio_context_h g_pir;
 
 char nbiot_msg[64];
 
-int para;
-sem_t task_sem;
 
 #if DEVICE1
 static int gpio_set_direction(int port, gpio_direciton_t dir)
@@ -161,10 +166,6 @@ int sal_app_rcv(int argc, char *argv[])
 #endif
 		}
 	}
-
-	return 0;
-}
-
 
 #if DEVICE2
 static int g_PIROFF;
@@ -328,6 +329,93 @@ int sal_task(int argc, char *argv[])
 
 	return 0;
 }
+#endif
+
+#if SAL_WIFI
+#include "sensor_mqtt_api.h"
+
+extern at_adaptor_api esp8266_interface;
+char utopic[32];
+char umsg[256];
+static int regsister_mqtt_server(mqtt_client_type_e type,char *addr, char *topic)
+{
+	if (!topic || !addr)
+	{
+		printf("Input null pointer!\n");
+		return -1;
+	}
+	//sent the event to cloud server
+	init_mqtt_variables(type);
+	set_mqtt_host_addr(type,addr);
+	set_mqtt_topic(type,topic);
+	set_mqtt_debug_mode(type, true);
+	return 0;
+}
+
+
+//static int mqtt_pub_send_msg(struct rule_engine_event *evt)
+static int mqtt_pub_send_msg(char *evt)
+{
+	int i;
+
+	if (!evt)
+	{
+		printf("Input null pionter!\n");
+		return -1;
+	}
+/*
+	//Create event data
+	struct mqtt_sensor_event senEvt;
+	memset(&senEvt, 0,sizeof(struct mqtt_sensor_event));
+	senEvt.event_type = evt->event_type;
+	senEvt.data_cnt = evt->data_cnt;
+	senEvt.reserved[0] = evt->reserved[0];
+	senEvt.reserved[1] = evt->reserved[1];
+	senEvt.timestamp = evt->timestamp;
+
+	for(i=0;i<evt->data_cnt;i++)
+	{
+		senEvt.data[i] = evt->data[i];
+	}
+*/
+	set_mqtt_pub_payload(evt, strlen(evt)+1);
+	mqtt_client_pub_task();
+
+	return 0;
+}
+
+void enable_mqtt_sub()
+{
+	 regsister_mqtt_server(SENSOR_MQTT_SUB, "109.123.100.115", utopic);
+	 mqtt_client_sub_task();
+	
+	unsigned int count = 10000;
+	 while(count)
+	 {
+		 sleep(2);
+		 count--;
+	 }
+	
+	 mqtt_destroy_client_sub_task();
+
+}
+void sensor_mqtt_demo(void)
+{
+	int count = 0;
+	char msg[256] = {0,};
+	printf("sensor_mqtt_demo\n");
+	
+	while (count++ < 3) {
+		printf("start regsister_mqtt_server\n");
+		regsister_mqtt_server(SENSOR_MQTT_PUB, "109.123.100.115", utopic);
+		printf("Send msg : TizenRT message[%d] via mqtt.\n", count);
+		snprintf(msg, 256, umsg);
+		mqtt_pub_send_msg(msg);
+		sleep(1);
+	}
+
+	mqtt_destroy_client_sub_task();
+}
 
 static int esp_wifi_task(int argc, char *argv[])
 {
@@ -337,13 +425,21 @@ static int esp_wifi_task(int argc, char *argv[])
 		sem_wait(&task_sem);
 		printf("get cmd sem, para %d\n", para);
 		at_api_register(&esp8266_interface);
+		sleep(3);
+
+		sensor_mqtt_demo();
+		/*
+		void *ctx = atiny_net_connect("109.123.100.115", "1883", 0);
+		int ret = atiny_net_send(ctx, "hello 115.", 11);
+		printf("send ret %d\n", ret);*/
 	}
 	
 	return 0;
 }
+#endif
 
-#define SAL_NBIOT 0
-#define SAL_WIFI  1
+int first_in = 1;
+int task_created = 0;
 #ifdef CONFIG_BUILD_KERNEL
 int main(int argc, FAR char *argv[])
 #else
@@ -351,6 +447,7 @@ int hello_main(int argc, char *argv[])
 #endif
 {	
 	printf("Hello, World!!\n");
+
 	if (first_in) {
 		first_in = 0;
 		return;
@@ -387,7 +484,21 @@ printf("register pir cb ->\n");
 #endif /*SAL_NBIOT*/
 
 #if SAL_WIFI
-	task_create("esp_wifi_task", SAL_RCV_TASK_PRIORITY, 0x1000, esp_wifi_task, NULL);
+	if (!task_created) {
+		task_create("esp_wifi_task", SAL_RCV_TASK_PRIORITY, 0x1000, esp_wifi_task, NULL);
+		task_created = 1;
+	}
+	if (argc > 1) {
+		strcpy(utopic, argv[1]);
+	} else {
+		strcpy(utopic, "lqmqtt");
+	}
+
+	if (argc > 2) {
+		strcpy(umsg, argv[2]);
+	} else {
+		strcpy(umsg, "Default message, Hello");
+	}
 	sem_post(&task_sem);
 #endif
 

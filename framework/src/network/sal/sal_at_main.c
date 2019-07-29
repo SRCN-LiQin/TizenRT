@@ -435,17 +435,20 @@ int cloud_cmd_matching(int8_t *buf, int32_t len)
     for(i = 0; i < at_oob.oob_num; i++)
     {
         //cmp = strstr((char *)buf, at_oob.oob[i].featurestr);
+        //20190725 modify for esp8266, return the offset of the featurestr in buf, -1 means no match
         ret = at_oob.oob[i].cmd_match((const char *)buf, at_oob.oob[i].featurestr,at_oob.oob[i].len);
-        if(ret == 0)
+        if(ret >= 0)
         {
             cmp += at_oob.oob[i].len;
             //            sscanf(cmp,"%d,%s",&rlen,wbuf);
             if(at_oob.oob[i].callback != NULL)
             {
-                (void)at_oob.oob[i].callback(at_oob.oob[i].arg, (int8_t *)buf, (int32_t)len);
+                (void)at_oob.oob[i].callback(at_oob.oob[i].arg, (int8_t *)(buf + ret), (int32_t)len);
             }
-        	AT_LOG("match cmd %s , return %d",at_oob.oob[i].featurestr, len);
-            return len;
+        	AT_LOG("match cmd %s , offset %d, return %d",at_oob.oob[i].featurestr, ret, len);
+			//if ret > 0, means cloud cmd is mixed with other matching suffix, need more processing. 
+			//TODO: maybe cloud cmd at first, that is offset 0, and follow with more suffix
+            return (ret > 0 ? 0 : len); 
         }
     }
     return 0;

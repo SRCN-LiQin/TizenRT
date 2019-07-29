@@ -25,14 +25,14 @@ extern "C" {
 
 /* MACRO DEFINE */
 #ifdef AT_INTO
-#define AT_LOG(fmt, arg...)  printf("[%lu][%s:%d][I]"fmt"\n", at_get_time(), __func__, __LINE__, ##arg)
+#define AT_LOG(fmt, arg...)  do {printf("[%lu][%s:%d][I]"fmt"\n", at_get_time(), __func__, __LINE__, ##arg);} while(0)
 #else
 static inline void __do_nothing(const char *fmt, ...) { (void)fmt; }
 #define AT_LOG(fmt, arg...)  __do_nothing(fmt, ##arg)
 #endif
 
 #ifdef AT_DEBUG
-#define AT_LOG_DEBUG(fmt, arg...)  printf("[%lu][%s:%d][D]"fmt"\n", at_get_time(), __func__, __LINE__, ##arg)
+#define AT_LOG_DEBUG(fmt, arg...)  do {printf("[%lu][%s:%d][D]"fmt"\n", at_get_time(), __func__, __LINE__, ##arg);} while(0)
 #else
 #define AT_LOG_DEBUG(fmt, arg...)
 #endif

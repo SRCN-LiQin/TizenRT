@@ -4,6 +4,8 @@
 
 extern at_task at;
 
+QUEUE_BUFF g_rcv_buff[AT_MAX_LINK_NUM];
+uint8_t g_peer_closed[AT_MAX_LINK_NUM];
 
 int esp8266_cmd(int8_t *cmd, int32_t len, const char *suffix, char *resp_buf, int* resp_len)
 {
@@ -91,12 +93,13 @@ int32_t esp8266_send(int32_t id , const uint8_t  *buf, uint32_t len)
     char cmd[64] = {0};
     if (AT_MUXMODE_SINGLE == at.mux_mode)
     {
-        snprintf(cmd, 64, "%s=%lu,\"%s\",%d", AT_CMD_SEND, len,at.linkid[0].remote_ip, at.linkid[0].remote_port);
+        //snprintf(cmd, 64, "%s=%lu,\"%s\",%d", AT_CMD_SEND, len,at.linkid[0].remote_ip, at.linkid[0].remote_port);
     }
     else
     {
-        snprintf(cmd, 64, "%s=%ld,%lu,\"%s\",%d", AT_CMD_SEND, id, len,at.linkid[id].remote_ip, at.linkid[id].remote_port);
+        //snprintf(cmd, 64, "%s=%ld,%lu,\"%s\",%d", AT_CMD_SEND, id, len,at.linkid[id].remote_ip, at.linkid[id].remote_port);
     }
+	snprintf(cmd, 64, "%s=%ld,%lu", AT_CMD_SEND, id, len);
 
     //   at.cmd(cmd, strlen(cmd), ">", NULL);
     ret = at.write((int8_t *)cmd, (int8_t *)"SEND OK\r\n", (int8_t *)buf, len);
@@ -109,6 +112,24 @@ int32_t esp8266_recv_timeout(int32_t id, uint8_t *buf, uint32_t len, char * host
     uint32_t qlen = sizeof(QUEUE_BUFF);
     uint32_t rxlen = 0;
 
+	if (g_rcv_buff[id].len) {
+		if (len < g_rcv_buff[id].len) {
+			rxlen = len;
+			memcpy(buf, g_rcv_buff[id].addr, rxlen);
+
+			g_rcv_buff[id].len -= len;
+			memcpy(g_rcv_buff[id].addr, (g_rcv_buff[id].addr + rxlen), g_rcv_buff[id].len);
+		} else {
+			rxlen = g_rcv_buff[id].len;
+			memcpy(buf, g_rcv_buff[id].addr, rxlen);
+
+			g_rcv_buff[id].len = 0;
+			at_free(g_rcv_buff[id].addr);
+		}
+		
+		return rxlen;
+	}
+
     QUEUE_BUFF  qbuf = {0, NULL};
     int ret = LOS_QueueReadCopy(at.linkid[id].qid, (void *)&qbuf, (UINT32 *)&qlen, timeout);
 //    AT_LOG("ret = %x, len = %ld, id = %ld, timeout = %d", ret, qbuf.len, id, timeout);
@@ -119,9 +140,18 @@ int32_t esp8266_recv_timeout(int32_t id, uint8_t *buf, uint32_t len, char * host
 
     if (qbuf.len)
     {
-        rxlen = (len < qbuf.len) ? len : qbuf.len;
-        memcpy(buf, qbuf.addr, rxlen);
-        at_free(qbuf.addr);
+		if (len < qbuf.len) {
+			rxlen = len;
+			memcpy(buf, qbuf.addr, rxlen);
+
+			g_rcv_buff[id] = qbuf;
+			g_rcv_buff[id].len -= len;
+			memcpy(qbuf.addr, (qbuf.addr + rxlen), g_rcv_buff[id].len);
+		} else {
+			rxlen = qbuf.len;
+			memcpy(buf, qbuf.addr, rxlen);
+			at_free(qbuf.addr);
+		}
     }
     return rxlen;
 }
@@ -158,7 +188,30 @@ int32_t esp8266_close(int32_t id)
         memset(&at.linkid[id], 0, sizeof(at_link));
         snprintf(cmd, 64, "%s=%ld", AT_CMD_CLOSE, id);
     }
+    
+    if (g_peer_closed[id]) {
+		g_peer_closed[id] = 0;
+		return 0;
+    }
     return esp8266_cmd((int8_t *)cmd, strlen(cmd), "OK\r\n", NULL, NULL);
+}
+
+int32_t esp8266_closed_handler(void *arg, int8_t *buf, int32_t len)
+{
+	char *p1;
+	int linkid;
+    if (NULL == buf || len <= 0)
+    {
+        AT_LOG("param invailed!");
+        return AT_FAILED;
+    }
+
+	//"0,CLOSED"
+	p1 = (char *)(buf - 2);
+	linkid = *p1 - '0';
+	if (linkid < AT_MAX_LINK_NUM) {
+		g_peer_closed[linkid] = 1;
+	}
 }
 
 int32_t esp8266_data_handler(void *arg, int8_t *buf, int32_t len)
@@ -243,6 +296,7 @@ LOOP:
             goto LOOP;
     }
 END:
+	atiny_sal_notify_rcv(at.linkid[linkid].qid);
     return 0;
 }
 
@@ -369,7 +423,14 @@ int32_t esp8266_show_dinfo(int32_t s)
 
 int32_t esp8266_cmd_match(const char *buf, char* featurestr,int len)
 {
-    return memcmp(buf,featurestr,len);
+	char *p = strstr(buf, featurestr);
+	if (p == NULL) {
+		return -1;
+	} else {
+		return (int32_t)(p - buf);
+	}
+
+    //return memcmp(buf,featurestr,len);
 }
 
 int32_t esp8266_init()
@@ -390,6 +451,7 @@ int32_t esp8266_init()
     at.init(&at_user_conf);
     //at.add_listener((int8_t*)AT_DATAF_PREFIX, NULL, esp8266_data_handler);
     at.oob_register(AT_DATAF_PREFIX, strlen(AT_DATAF_PREFIX), esp8266_data_handler, esp8266_cmd_match);
+    at.oob_register("CLOSED", strlen("CLOSED"), esp8266_closed_handler, esp8266_cmd_match);
 
     esp8266_reset();
     esp8266_echo_off();
