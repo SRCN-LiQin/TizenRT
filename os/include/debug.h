@@ -580,6 +580,28 @@
 #define tmllvdbg(...)
 #endif
 
+#ifdef CONFIG_DEBUG_UI_ERROR
+#define uidbg(format, ...)      dbg(format, ##__VA_ARGS__)
+#define uilldbg(format, ...)    lldbg(format, ##__VA_ARGS__)
+#else
+#define uidbg(...)
+#define uilldbg(...)
+#endif
+#ifdef CONFIG_DEBUG_UI_WARN
+#define uiwdbg(format, ...)    wdbg(format, ##__VA_ARGS__)
+#define uillwdbg(format, ...)  llwdbg(format, ##__VA_ARGS__)
+#else
+#define uiwdbg(...)
+#define uillwdbg(...)
+#endif
+#ifdef CONFIG_DEBUG_UI_INFO
+#define uivdbg(format, ...)     vdbg(format, ##__VA_ARGS__)
+#define uillvdbg(format, ...)   llvdbg(format, ##__VA_ARGS__)
+#else
+#define uivdbg(...)
+#define uillvdbg(...)
+#endif
+
 /******************************************/
 /*        OS Function specific debug      */
 /******************************************/

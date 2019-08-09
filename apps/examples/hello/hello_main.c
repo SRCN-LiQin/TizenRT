@@ -109,6 +109,7 @@ static int mqtt_pub_send_msg(char *evt)
 	return 0;
 }
 
+extern void update_araui_text(char* str);
 void sensor_message_callback(void *client, mqtt_msg_t *msg)
 {
 	mqtt_client_t *mqtt_client = (mqtt_client_t *)client;
@@ -124,6 +125,7 @@ void sensor_message_callback(void *client, mqtt_msg_t *msg)
 		printf("[Topic]: %s\n", msg->topic);
 		printf("[Message]: %s\n", msg->payload);
 	}
+	update_araui_text(msg->payload);
 }
 
 void enable_mqtt_sub()
@@ -187,7 +189,7 @@ int hello_main(int argc, char *argv[])
 		first =1 ;
 		return 0;
 	}
-
+	
 	if (argc > 1) {
 		strcpy(utopic, argv[1]);
 	} else {
@@ -197,6 +199,8 @@ int hello_main(int argc, char *argv[])
 	if (!wifi_connected) {
 		//task_create("wifi connect", 100, 1024 * 10, wm_process, NULL);
 		wifi_connected = 1;
+		araui_sample_main(argc, argv);
+
 		wm_start(NULL);
 		sleep(2);
 		struct options op = {
