@@ -423,9 +423,9 @@ static int esp_wifi_task(int argc, char *argv[])
 
 	while(1) {
 		sem_wait(&task_sem);
-		printf("get cmd sem, para %d\n", para);
+		//printf("get cmd sem, para %d\n", para);
 		at_api_register(&esp8266_interface);
-		sleep(3);
+		//sleep(3);
 
 		sensor_mqtt_demo();
 		/*
@@ -446,7 +446,7 @@ int main(int argc, FAR char *argv[])
 int hello_main(int argc, char *argv[])
 #endif
 {	
-	printf("Hello, World!!\n");
+	//printf("Hello, World!!\n");
 
 	if (first_in) {
 		first_in = 0;

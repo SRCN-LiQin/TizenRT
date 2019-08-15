@@ -56,8 +56,9 @@ include $(APPDIR)/Make.defs
 
 # Hello, World! built-in application info
 
-APPNAME = hello
-FUNCNAME = $(APPNAME)_main
+APPNAME = mqtt_publish
+FUNCNAME = hello_main
+#FUNCNAME = $(APPNAME)_main
 THREADEXEC = TASH_EXECMD_ASYNC
 
 # Hello, World! Example
